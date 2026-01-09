@@ -1,0 +1,83 @@
+pipeline {
+    agent any
+
+    parameters {
+        choice(
+            name: 'ACTION',
+            choices: ['apply', 'destroy'],
+            description: '🔧 Select the Terraform action to perform (apply = create/update, destroy = delete all)'
+        )
+    }
+
+    environment {
+        // Nom de ton bucket S3 pour l'état Terraform
+        TF_BACKEND_BUCKET = "melissa-lab-terraform-state"
+        TF_REGION        = "us-east-1"
+        TERRAFORM_DIR    = "ecr-terraform"  // dossier contenant tes fichiers Terraform
+    }
+
+    stages {
+        stage('Checkout from Git') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Terraform version') {
+            steps {
+                sh 'terraform --version'
+            }
+        }
+
+        stage('Terraform init') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh """
+                    terraform init -reconfigure \\
+                        -backend-config="bucket=${TF_BACKEND_BUCKET}" \\
+                        -backend-config="key=ecr/terraform.tfstate" \\
+                        -backend-config="region=${TF_REGION}"
+                    """
+                }
+            }
+        }
+
+        stage('Terraform validate') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform validate'
+                }
+            }
+        }
+
+        stage('Terraform plan') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform plan'
+                }
+            }
+        }
+
+        stage('Terraform apply') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+
+        stage('Terraform destroy') {
+            when {
+                expression { params.ACTION == 'destroy' }
+            }
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform destroy -auto-approve'
+                }
+            }
+        }
+    }
+}

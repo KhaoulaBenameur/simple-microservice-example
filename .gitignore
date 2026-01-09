@@ -1,2 +1,24 @@
 .vscode
 .idea
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+**/*.tfstate
+**/*.tfstate.*
+crash.log
+crash.*.log
+
+# Secrets / env
+.env
+*.pem
+*.key
+
+# OS / IDE
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Node (if any)
+node_modules/
+npm-debug.log
